@@ -1,0 +1,34 @@
+[package]
+name        = "protondrive-sdk"
+description = "Proton Drive Rust SDK — high-level API surface"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+authors.workspace     = true
+repository.workspace  = true
+
+[features]
+default = ["gopgp"]
+gopgp   = ["protondrive-crypto/gopgp"]
+rustpgp = ["protondrive-crypto/rustpgp"]
+
+[dependencies]
+protondrive-core    = { workspace = true }
+protondrive-crypto  = { workspace = true }
+protondrive-api     = { workspace = true }
+protondrive-auth    = { workspace = true }
+protondrive-events  = { workspace = true }
+tokio               = { workspace = true }
+futures             = { workspace = true }
+bytes               = { workspace = true }
+tokio-util          = { workspace = true }
+serde               = { workspace = true }
+thiserror           = { workspace = true }
+tracing             = { workspace = true }
+secrecy             = { workspace = true }
+
+[dev-dependencies]
+wiremock   = { workspace = true }
+tokio-test = { workspace = true }
+proptest   = { workspace = true }

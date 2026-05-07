@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths: ["rs/**"]
+  pull_request:
+    paths: ["rs/**"]
+
+defaults:
+  run:
+    working-directory: rs
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  build-test:
+    name: Build & Test (${{ matrix.os }} / ${{ matrix.toolchain }} / ${{ matrix.features }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable, nightly]
+        features: ["gopgp", "rustpgp"]
+        exclude:
+          # nightly is allowed-to-fail; handled via continue-on-error below
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rs
+      - name: Build
+        run: cargo build --no-default-features --features ${{ matrix.features }}
+        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
+      - name: Test
+        run: cargo test --no-default-features --features ${{ matrix.features }}
+        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
+
+  msrv:
+    name: MSRV check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.75
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rs
+      - run: cargo check --no-default-features --features rustpgp
+
+  lint:
+    name: Clippy & fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rs
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --no-default-features --features rustpgp -- -D warnings
+
+  deny:
+    name: cargo-deny (licenses + advisories)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          manifest-path: rs/Cargo.toml
+
+  audit:
+    name: cargo-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

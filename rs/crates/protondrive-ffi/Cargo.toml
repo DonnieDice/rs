@@ -1,0 +1,19 @@
+[package]
+name        = "protondrive-ffi"
+description = "C ABI for Swift/Kotlin/C# consumers of the Proton Drive Rust SDK"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+authors.workspace     = true
+repository.workspace  = true
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+# FFI is the only crate permitted unsafe_code
+# unsafe_code = allow via NOT having #![forbid(unsafe_code)]
+
+[dependencies]
+protondrive-sdk = { workspace = true }
+tokio           = { workspace = true }

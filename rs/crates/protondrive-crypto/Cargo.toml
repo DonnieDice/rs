@@ -1,0 +1,23 @@
+[package]
+name        = "protondrive-crypto"
+description = "Thin insulation layer over proton-crypto for the Proton Drive Rust SDK"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+authors.workspace     = true
+repository.workspace  = true
+
+[features]
+default = ["gopgp"]
+# Pass through to proton-crypto backend selection
+gopgp   = ["proton-crypto/gopgp"]
+rustpgp = ["proton-crypto/rustpgp"]
+
+[dependencies]
+protondrive-core      = { workspace = true }
+proton-crypto         = { workspace = true }
+proton-crypto-account = { workspace = true }
+thiserror             = { workspace = true }
+zeroize               = { workspace = true }
+bytes                 = { workspace = true }

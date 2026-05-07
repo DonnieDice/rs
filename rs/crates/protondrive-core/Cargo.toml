@@ -1,0 +1,16 @@
+[package]
+name        = "protondrive-core"
+description = "Shared types, errors, and opaque IDs for the Proton Drive Rust SDK"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+authors.workspace     = true
+repository.workspace  = true
+
+[dependencies]
+serde     = { workspace = true }
+thiserror = { workspace = true }
+uuid      = { workspace = true }
+secrecy   = { workspace = true }
+zeroize   = { workspace = true }

@@ -1,0 +1,27 @@
+[package]
+name        = "protondrive-api"
+description = "HTTP client, endpoint bindings, retry/backoff, and rate limiting for the Proton Drive Rust SDK"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+authors.workspace     = true
+repository.workspace  = true
+
+[dependencies]
+protondrive-core = { workspace = true }
+reqwest          = { workspace = true }
+reqwest_cookie_store = { workspace = true }
+serde            = { workspace = true }
+serde_json       = { workspace = true }
+tokio            = { workspace = true }
+thiserror        = { workspace = true }
+tracing          = { workspace = true }
+backon           = { workspace = true }
+url              = { workspace = true }
+bytes            = { workspace = true }
+secrecy          = { workspace = true }
+
+[dev-dependencies]
+wiremock   = { workspace = true }
+tokio-test = { workspace = true }
