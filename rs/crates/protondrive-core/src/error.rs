@@ -11,7 +11,7 @@ pub enum DriveError {
     Api { code: u32, message: String },
 
     #[error("network error: {0}")]
-    Network(#[from] reqwest::Error),
+    Network(String),
 
     #[error("serialization error: {0}")]
     Serialization(#[from] serde_json::Error),

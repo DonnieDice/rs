@@ -3,6 +3,10 @@ use crate::retry::default_backoff;
 use backon::Retryable;
 use protondrive_core::error::{DriveError, Result};
 use reqwest::{header, Method, RequestBuilder, Response, StatusCode};
+
+fn net_err(e: reqwest::Error) -> DriveError {
+    DriveError::Network(e.to_string())
+}
 use reqwest_cookie_store::CookieStoreMutex;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
@@ -22,7 +26,7 @@ impl ApiClient {
             .cookie_provider(cookie_store)
             .use_rustls_tls()
             .build()
-            .map_err(DriveError::Network)?;
+            .map_err(net_err)?;
 
         Ok(Self {
             inner,
@@ -94,7 +98,7 @@ impl ApiClient {
                 .expect("request must be cloneable for retry")
                 .send()
                 .await
-                .map_err(DriveError::Network)?;
+                .map_err(net_err)?;
             self.parse_response(response).await
         };
 

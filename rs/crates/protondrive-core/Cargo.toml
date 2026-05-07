@@ -14,3 +14,4 @@ thiserror = { workspace = true }
 uuid      = { workspace = true }
 secrecy   = { workspace = true }
 zeroize   = { workspace = true }
+anyhow    = { workspace = true }

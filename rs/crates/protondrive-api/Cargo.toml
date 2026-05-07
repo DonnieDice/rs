@@ -25,3 +25,4 @@ secrecy          = { workspace = true }
 [dev-dependencies]
 wiremock   = { workspace = true }
 tokio-test = { workspace = true }
+regex      = { version = "1" }
