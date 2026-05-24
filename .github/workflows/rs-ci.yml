@@ -1,0 +1,100 @@
+name: Rust SDK CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "rs/**"
+      - ".github/workflows/rs-ci.yml"
+  pull_request:
+    paths:
+      - "rs/**"
+      - ".github/workflows/rs-ci.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: rs
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  build_test:
+    name: SDK Build & Test (${{ matrix.os }} / ${{ matrix.toolchain }} / ${{ matrix.crypto }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.toolchain == 'nightly' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable, nightly]
+        crypto: [rustpgp]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rs
+
+      - name: Build
+        run: cargo build -p protondrive-sdk --no-default-features --features ${{ matrix.crypto }}
+
+      - name: Test
+        run: cargo test -p protondrive-sdk --no-default-features --features ${{ matrix.crypto }}
+
+  lint:
+    name: Format, Clippy, SDK Route Guards
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rs
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy -p protondrive-sdk --all-targets --no-default-features --features rustpgp -- -D warnings
+
+      - name: Guard official Drive API routes
+        run: bash scripts/ci/check-sdk-route-regressions.sh
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.88
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rs
+
+      - run: cargo check -p protondrive-sdk --no-default-features --features rustpgp
+
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          manifest-path: rs/Cargo.toml

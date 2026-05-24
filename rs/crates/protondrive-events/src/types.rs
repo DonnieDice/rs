@@ -12,7 +12,10 @@ pub struct DriveEvent {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum EventAction {
     /// A node was created or updated.
-    NodeUpdated { node_id: NodeId, payload: serde_json::Value },
+    NodeUpdated {
+        node_id: NodeId,
+        payload: serde_json::Value,
+    },
     /// A node was deleted.
     NodeDeleted { node_id: NodeId },
     /// A node was trashed.

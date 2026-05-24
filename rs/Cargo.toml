@@ -13,7 +13,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.88"
 license = "GPL-3.0-or-later"
 authors = ["DonnieDice"]
 repository = "https://github.com/DonnieDice/rs"
@@ -21,15 +21,16 @@ repository = "https://github.com/DonnieDice/rs"
 [workspace.dependencies]
 # Internal crates
 protondrive-core    = { path = "crates/protondrive-core" }
-protondrive-crypto  = { path = "crates/protondrive-crypto" }
+protondrive-crypto  = { path = "crates/protondrive-crypto", default-features = false }
 protondrive-api     = { path = "crates/protondrive-api" }
 protondrive-auth    = { path = "crates/protondrive-auth" }
 protondrive-events  = { path = "crates/protondrive-events" }
+protondrive-sdk     = { path = "crates/protondrive-sdk" }
 
 # Proton foundation crates
-proton-crypto         = { version = "0.1", default-features = false }
-proton-crypto-account = { version = "0.1", default-features = false }
-proton-srp            = { version = "0.1" }
+proton-crypto         = { version = "0.12.1", default-features = false }
+proton-crypto-account = { version = "0.18.1", default-features = false }
+proton-srp            = { version = "0.8.2" }
 
 # Async runtime
 tokio  = { version = "1", features = ["rt-multi-thread", "macros", "sync", "io-util", "time"] }
@@ -42,6 +43,8 @@ reqwest_cookie_store = { version = "0.8" }
 # Serialization
 serde       = { version = "1", features = ["derive"] }
 serde_json  = { version = "1" }
+serde_urlencoded = { version = "0.7" }
+sha2 = { version = "0.10" }
 
 # Secrets / zeroing
 secrecy  = { version = "0.10", features = ["serde"] }

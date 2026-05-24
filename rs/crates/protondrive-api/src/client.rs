@@ -1,6 +1,9 @@
-use crate::config::{SdkConfig, PROTON_API_BASE};
+use crate::config::{
+    SdkConfig, DEFAULT_STORAGE_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, DRIVE_SDK_VERSION, PROTON_API_BASE,
+};
 use crate::retry::default_backoff;
 use backon::Retryable;
+use bytes::Bytes;
 use protondrive_core::error::{DriveError, Result};
 use reqwest::{header, Method, RequestBuilder, Response, StatusCode};
 
@@ -10,6 +13,7 @@ fn net_err(e: reqwest::Error) -> DriveError {
 use reqwest_cookie_store::CookieStoreMutex;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::instrument;
 
 #[derive(Debug, Clone)]
@@ -77,18 +81,53 @@ impl ApiClient {
     }
 
     fn build_request(&self, method: Method, path: &str) -> RequestBuilder {
-        let url = format!("{PROTON_API_BASE}{path}");
+        let url = metadata_url(path);
         let mut req = self.inner.request(method, &url);
 
+        req = req.timeout(Duration::from_millis(DEFAULT_TIMEOUT_MS));
         req = req.header("x-pm-appversion", &self.config.app_version);
         req = req.header(header::USER_AGENT, &self.config.user_agent);
         req = req.header("x-pm-apiversion", "3");
+        req = req.header("x-pm-drive-sdk-version", DRIVE_SDK_VERSION);
+        req = req.header(header::ACCEPT, "application/vnd.protonmail.v1+json");
 
         if let Some(token) = self.access_token.read().unwrap().as_deref() {
             req = req.bearer_auth(token);
         }
 
         req
+    }
+
+    pub async fn get_block(&self, base_url: &str, token: &str) -> Result<Bytes> {
+        let req = self
+            .inner
+            .request(Method::GET, base_url)
+            .timeout(Duration::from_millis(DEFAULT_STORAGE_TIMEOUT_MS))
+            .header("pm-storage-token", token)
+            .header("x-pm-appversion", &self.config.app_version)
+            .header(header::USER_AGENT, &self.config.user_agent)
+            .header("x-pm-drive-sdk-version", DRIVE_SDK_VERSION);
+
+        let response = req.send().await.map_err(net_err)?;
+        self.parse_bytes_response(response).await
+    }
+
+    pub async fn post_block<B>(&self, base_url: &str, token: &str, body: B) -> Result<()>
+    where
+        B: Into<reqwest::Body>,
+    {
+        let req = self
+            .inner
+            .request(Method::POST, base_url)
+            .timeout(Duration::from_millis(DEFAULT_STORAGE_TIMEOUT_MS))
+            .header("pm-storage-token", token)
+            .header("x-pm-appversion", &self.config.app_version)
+            .header(header::USER_AGENT, &self.config.user_agent)
+            .header("x-pm-drive-sdk-version", DRIVE_SDK_VERSION)
+            .body(body);
+
+        let response = req.send().await.map_err(net_err)?;
+        self.parse_empty_response(response).await
     }
 
     async fn execute_with_retry<T: DeserializeOwned>(&self, req: RequestBuilder) -> Result<T> {
@@ -103,7 +142,7 @@ impl ApiClient {
         };
 
         action
-            .retry(default_backoff())
+            .retry(&default_backoff())
             .when(|e| matches!(e, DriveError::RateLimited { .. } | DriveError::Network(_)))
             .await
     }
@@ -124,9 +163,7 @@ impl ApiClient {
             StatusCode::UNAUTHORIZED => Err(DriveError::SessionExpired),
             StatusCode::NOT_FOUND => Err(DriveError::NotFound),
             StatusCode::FORBIDDEN => Err(DriveError::PermissionDenied),
-            s if s.is_success() => {
-                response.json::<T>().await.map_err(DriveError::Network)
-            }
+            s if s.is_success() => response.json::<T>().await.map_err(net_err),
             _ => {
                 #[derive(serde::Deserialize)]
                 struct ApiErr {
@@ -136,15 +173,101 @@ impl ApiClient {
                     error: String,
                 }
                 let status = response.status().as_u16() as u32;
-                let body = response
-                    .json::<ApiErr>()
-                    .await
-                    .unwrap_or(ApiErr { code: status, error: "unknown error".into() });
+                let body = response.json::<ApiErr>().await.unwrap_or(ApiErr {
+                    code: status,
+                    error: "unknown error".into(),
+                });
                 Err(DriveError::Api {
                     code: body.code,
                     message: body.error,
                 })
             }
         }
+    }
+
+    async fn parse_empty_response(&self, response: Response) -> Result<()> {
+        match response.status() {
+            s if s.is_success() => Ok(()),
+            _ => self
+                .parse_response::<serde_json::Value>(response)
+                .await
+                .map(|_| ()),
+        }
+    }
+
+    async fn parse_bytes_response(&self, response: Response) -> Result<Bytes> {
+        match response.status() {
+            s if s.is_success() => response.bytes().await.map_err(net_err),
+            _ => self
+                .parse_response::<serde_json::Value>(response)
+                .await
+                .map(|_| Bytes::new()),
+        }
+    }
+}
+
+pub(crate) fn metadata_url(path: &str) -> String {
+    format!("{PROTON_API_BASE}/{}", path.trim_start_matches('/'))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{DEFAULT_STORAGE_TIMEOUT_MS, DEFAULT_TIMEOUT_MS};
+
+    fn client() -> ApiClient {
+        ApiClient::new(
+            SdkConfig::new("external-drive-linux@1.0.0-stable", "protondrive-test").unwrap(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn metadata_request_sets_official_headers_and_timeout() {
+        let req = client()
+            .build_request(Method::GET, "drive/v2/shares/my-files")
+            .build()
+            .unwrap();
+
+        assert_eq!(
+            req.url().as_str(),
+            "https://drive.proton.me/api/drive/v2/shares/my-files"
+        );
+        assert_eq!(
+            req.headers()["x-pm-appversion"],
+            "external-drive-linux@1.0.0-stable"
+        );
+        assert_eq!(req.headers()["user-agent"], "protondrive-test");
+        assert_eq!(req.headers()["x-pm-apiversion"], "3");
+        assert_eq!(req.headers()["x-pm-drive-sdk-version"], DRIVE_SDK_VERSION);
+        assert_eq!(
+            req.headers()["accept"],
+            "application/vnd.protonmail.v1+json"
+        );
+        assert_eq!(
+            req.timeout().copied(),
+            Some(Duration::from_millis(DEFAULT_TIMEOUT_MS))
+        );
+    }
+
+    #[test]
+    fn storage_upload_request_sets_official_headers_and_timeout() {
+        let req = client()
+            .inner
+            .request(Method::POST, "https://storage.example.test/block")
+            .timeout(Duration::from_millis(DEFAULT_STORAGE_TIMEOUT_MS))
+            .header("pm-storage-token", "token")
+            .header("x-pm-appversion", "external-drive-linux@1.0.0-stable")
+            .header(header::USER_AGENT, "protondrive-test")
+            .header("x-pm-drive-sdk-version", DRIVE_SDK_VERSION)
+            .build()
+            .unwrap();
+
+        assert_eq!(req.headers()["pm-storage-token"], "token");
+        assert_eq!(req.headers()["x-pm-drive-sdk-version"], DRIVE_SDK_VERSION);
+        assert_eq!(
+            req.timeout().copied(),
+            Some(Duration::from_millis(DEFAULT_STORAGE_TIMEOUT_MS))
+        );
     }
 }

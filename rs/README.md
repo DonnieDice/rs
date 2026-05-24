@@ -38,7 +38,7 @@ Build the Rust SDK for Proton Drive that:
 ```
 rs/
 ├── Cargo.toml                          # workspace root; all shared dependency versions
-├── rust-toolchain.toml                 # MSRV pin (1.75)
+├── rust-toolchain.toml                 # MSRV pin (1.88)
 ├── deny.toml                           # cargo-deny license + advisory config
 ├── crates/
 │   ├── protondrive-core/               # types, errors, opaque IDs (NodeId, ShareId, EventId…)
@@ -303,7 +303,7 @@ cargo +nightly fuzz run fuzz_event_stream
 
 | Toolchain | When needed |
 |---|---|
-| Rust 1.75+ (MSRV) | Always |
+| Rust 1.88+ (MSRV) | Always |
 | Go 1.21+ | Only for `--features gopgp` (default) |
 | No Go needed | `--no-default-features --features rustpgp` |
 
@@ -316,7 +316,7 @@ cargo build --no-default-features --features rustpgp
 cargo build --features gopgp
 
 # Check MSRV
-rustup override set 1.75
+rustup override set 1.88
 cargo check --no-default-features --features rustpgp
 ```
 

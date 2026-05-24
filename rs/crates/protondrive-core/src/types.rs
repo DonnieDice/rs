@@ -77,8 +77,20 @@ pub struct Share {
 pub struct ShareFlags(u32);
 
 impl ShareFlags {
-    pub fn is_primary(&self) -> bool { self.0 & 1 != 0 }
-    pub fn is_locked(&self) -> bool  { self.0 & 2 != 0 }
+    pub fn from_bits(bits: u32) -> Self {
+        Self(bits)
+    }
+
+    pub fn bits(&self) -> u32 {
+        self.0
+    }
+
+    pub fn is_primary(&self) -> bool {
+        self.0 & 1 != 0
+    }
+    pub fn is_locked(&self) -> bool {
+        self.0 & 2 != 0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

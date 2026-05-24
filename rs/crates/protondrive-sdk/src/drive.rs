@@ -7,8 +7,8 @@ use protondrive_core::{
     ids::{EventId, NodeId, RevisionId, ShareId},
     types::{Node, NodeKind, NodeState, Photo, Revision, Share, Volume, VolumeState},
 };
-use protondrive_events::{EventStream};
-use tokio::io::{AsyncRead};
+use protondrive_events::EventStream;
+use tokio::io::AsyncRead;
 use tracing::instrument;
 
 pub struct ProtonDrive {
@@ -34,15 +34,19 @@ impl ProtonDrive {
     #[instrument(skip(self))]
     pub async fn list_volumes(&self) -> Result<Vec<Volume>> {
         let resp = self.client.list_volumes().await?;
-        Ok(resp.volumes.into_iter().map(|v| Volume {
-            id: v.volume_id.into(),
-            share_id: v.share.share_id.into(),
-            state: match v.state {
-                2 => VolumeState::Deleted,
-                3 => VolumeState::Locked,
-                _ => VolumeState::Active,
-            },
-        }).collect())
+        Ok(resp
+            .volumes
+            .into_iter()
+            .map(|v| Volume {
+                id: v.volume_id.into(),
+                share_id: v.share.share_id.into(),
+                state: match v.state {
+                    2 => VolumeState::Deleted,
+                    3 => VolumeState::Locked,
+                    _ => VolumeState::Active,
+                },
+            })
+            .collect())
     }
 
     #[instrument(skip(self), fields(share_id = %share, parent = ?parent))]
@@ -52,7 +56,11 @@ impl ProtonDrive {
         parent: Option<&NodeId>,
     ) -> Result<Vec<Node>> {
         let resp = self.client.list_children(share, parent).await?;
-        Ok(resp.links.into_iter().map(|l| link_dto_to_node(l, share)).collect())
+        Ok(resp
+            .links
+            .into_iter()
+            .map(|l| link_dto_to_node(l, share))
+            .collect())
     }
 
     #[instrument(skip(self), fields(share_id = %share, node_id = %id))]
@@ -85,10 +93,17 @@ impl ProtonDrive {
     pub async fn rename(&self, share: &ShareId, node: &NodeId, new_name: &str) -> Result<()> {
         use protondrive_api::endpoints::nodes::RenameRequest;
         self.client
-            .rename_link(share, node, &RenameRequest {
-                name: new_name.to_owned(),
-                mime_type: None,
-            })
+            .rename_link(
+                share,
+                node,
+                &RenameRequest {
+                    name: new_name.to_owned(),
+                    name_signature_email: None,
+                    hash: None,
+                    original_hash: None,
+                    mime_type: None,
+                },
+            )
             .await
     }
 
@@ -102,10 +117,21 @@ impl ProtonDrive {
     ) -> Result<()> {
         use protondrive_api::endpoints::nodes::MoveRequest;
         self.client
-            .move_link(share, node, &MoveRequest {
-                parent_link_id: new_parent.to_string(),
-                name: new_name.to_owned(),
-            })
+            .move_link(
+                share,
+                node,
+                &MoveRequest {
+                    parent_link_id: new_parent.to_string(),
+                    node_passphrase: None,
+                    node_passphrase_signature: None,
+                    signature_email: None,
+                    name: new_name.to_owned(),
+                    name_signature_email: None,
+                    hash: None,
+                    original_hash: None,
+                    content_hash: None,
+                },
+            )
             .await
     }
 
@@ -113,9 +139,12 @@ impl ProtonDrive {
     pub async fn trash(&self, share: &ShareId, node: &NodeId) -> Result<()> {
         use protondrive_api::endpoints::nodes::TrashRequest;
         self.client
-            .trash_links(share, &TrashRequest {
-                link_ids: vec![node.to_string()],
-            })
+            .trash_links(
+                share,
+                &TrashRequest {
+                    link_ids: vec![node.to_string()],
+                },
+            )
             .await
     }
 
@@ -130,12 +159,16 @@ impl ProtonDrive {
     pub async fn list_shares(&self) -> Result<Vec<Share>> {
         use protondrive_core::types::ShareFlags;
         let resp = self.client.list_shares().await?;
-        Ok(resp.shares.into_iter().map(|s| Share {
-            id: s.share_id.into(),
-            volume_id: s.volume_id.into(),
-            link_id: s.link_id.into(),
-            flags: ShareFlags(s.flags),
-        }).collect())
+        Ok(resp
+            .shares
+            .into_iter()
+            .map(|s| Share {
+                id: s.share_id.into(),
+                volume_id: s.volume_id.into(),
+                link_id: s.link_id.into(),
+                flags: ShareFlags::from_bits(s.flags),
+            })
+            .collect())
     }
 
     // ── Photos ──────────────────────────────────────────────────────────────
@@ -151,19 +184,23 @@ impl ProtonDrive {
     pub async fn list_revisions(&self, share: &ShareId, node: &NodeId) -> Result<Vec<Revision>> {
         use protondrive_core::types::RevisionState;
         let resp = self.client.list_revisions(share, node).await?;
-        Ok(resp.revisions.into_iter().map(|r| Revision {
-            id: r.id.into(),
-            node_id: node.clone(),
-            size: r.size,
-            state: match r.state {
-                0 => RevisionState::Draft,
-                2 => RevisionState::Superseded,
-                3 => RevisionState::Deleted,
-                _ => RevisionState::Active,
-            },
-            created_at: r.create_time,
-            manifest_signature: r.manifest_signature,
-        }).collect())
+        Ok(resp
+            .revisions
+            .into_iter()
+            .map(|r| Revision {
+                id: r.id.into(),
+                node_id: node.clone(),
+                size: r.size,
+                state: match r.state {
+                    0 => RevisionState::Draft,
+                    2 => RevisionState::Superseded,
+                    3 => RevisionState::Deleted,
+                    _ => RevisionState::Active,
+                },
+                created_at: r.create_time,
+                manifest_signature: r.manifest_signature,
+            })
+            .collect())
     }
 
     #[instrument(skip(self), fields(node = %node, rev = %rev))]
@@ -190,16 +227,17 @@ impl ProtonDrive {
     }
 }
 
-fn link_dto_to_node(
-    l: protondrive_api::endpoints::nodes::LinkDto,
-    share: &ShareId,
-) -> Node {
+fn link_dto_to_node(l: protondrive_api::endpoints::nodes::LinkDto, share: &ShareId) -> Node {
     Node {
         id: l.link_id.into(),
         share_id: share.clone(),
         parent_id: l.parent_link_id.map(Into::into),
         name: l.name,
-        kind: if l.r#type == 2 { NodeKind::Folder } else { NodeKind::File },
+        kind: if l.r#type == 2 {
+            NodeKind::Folder
+        } else {
+            NodeKind::File
+        },
         state: match l.state {
             2 => NodeState::Trashed,
             3 => NodeState::Deleted,

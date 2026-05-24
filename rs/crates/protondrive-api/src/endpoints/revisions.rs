@@ -1,5 +1,8 @@
 use crate::client::ApiClient;
-use protondrive_core::{error::Result, ids::{NodeId, RevisionId, ShareId}};
+use protondrive_core::{
+    error::Result,
+    ids::{NodeId, RevisionId, ShareId},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]

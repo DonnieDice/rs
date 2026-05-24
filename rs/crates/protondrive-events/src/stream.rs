@@ -7,8 +7,6 @@ use protondrive_core::{
 };
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::time::Duration;
-use tokio::time::sleep;
 use tracing::{debug, warn};
 
 /// A lazy, poll-driven stream of Drive events for a single share.
@@ -62,10 +60,6 @@ impl Stream for EventStream {
             let cursor = self.cursor.clone();
 
             self.fetch = Some(Box::pin(async move {
-                // Brief sleep between polls to avoid hammering the API
-                if !false {
-                    // only sleep on "no more" pages; always fetch immediately if more=1
-                }
                 let resp = client.get_events(&share_id, &cursor).await?;
                 let next_cursor = EventId::new(&resp.event_id);
                 let more = resp.more != 0;

@@ -25,14 +25,18 @@ pub async fn login(
         .await?;
 
     // Step 2: SRP-6a handshake via proton-srp
-    let srp_proof = proton_srp::compute_proof(
-        username,
+    let srp_version = proton_srp::SrpHashVersion::try_from(info.version as u8)
+        .map_err(|e| DriveError::Auth(e.to_string()))?;
+    let srp_proof: proton_srp::SRPProofB64 = proton_srp::SRPAuth::with_pgp(
+        Some(username),
         password.expose_secret(),
+        srp_version,
+        &info.salt,
         &info.modulus,
         &info.server_ephemeral,
-        &info.salt,
-        info.version,
     )
+    .and_then(|srp| srp.generate_proofs())
+    .map(proton_srp::SRPProofB64::from)
     .map_err(|e| DriveError::Auth(e.to_string()))?;
 
     // Step 3: send proof, get tokens
@@ -54,9 +58,7 @@ pub async fn login(
                     return Err(DriveError::Auth("WebAuthn 2FA not yet implemented".into()))
                 }
             };
-            client
-                .submit_two_factor(&TwoFactorRequest { code })
-                .await?;
+            client.submit_two_factor(&TwoFactorRequest { code }).await?;
         }
     }
 
@@ -83,7 +85,6 @@ pub fn resume_session(
 /// Refresh an expired access token using the refresh token.
 pub async fn refresh(client: &ApiClient, session: &mut Session) -> Result<()> {
     use protondrive_api::endpoints::auth::RefreshRequest;
-    use secrecy::ExposeSecret;
 
     let resp = client
         .refresh_token(&RefreshRequest {

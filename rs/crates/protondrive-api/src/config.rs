@@ -3,11 +3,20 @@ use protondrive_core::error::{DriveError, Result};
 /// Canonical Proton API base URL. Never overrideable at runtime.
 pub const PROTON_API_BASE: &str = "https://drive.proton.me/api";
 
+/// SDK version header value sent on every metadata and storage request.
+pub const DRIVE_SDK_VERSION: &str = concat!("rs@", env!("CARGO_PKG_VERSION"));
+
+/// Official SDK metadata timeout. Mirrors the JavaScript SDK.
+pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
+
+/// Official SDK storage timeout. Mirrors the JavaScript SDK.
+pub const DEFAULT_STORAGE_TIMEOUT_MS: u64 = 600_000;
+
 /// Regex all `x-pm-appversion` values must satisfy.
 ///
 /// Pattern: `^(external-drive)+(-[a-z_]+)+@[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-((stable|beta|RC|alpha)(([.-]?\d+)*)?)?([.-]?dev)?(\+.*)?$`
-const APP_VERSION_PATTERN: &str =
-    r"^(external-drive)+(-[a-z_]+)+@[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-((stable|beta|RC|alpha)(([.-]?\d+)*)?)?([.-]?dev)?(\+.*)?$";
+#[cfg(test)]
+const APP_VERSION_PATTERN: &str = r"^(external-drive)+(-[a-z_]+)+@[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-((stable|beta|RC|alpha)(([.-]?\d+)*)?)?([.-]?dev)?(\+.*)?$";
 
 #[derive(Debug, Clone)]
 pub struct SdkConfig {
@@ -39,14 +48,11 @@ fn validate_app_version(v: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::APP_VERSION_PATTERN;
     use regex::Regex;
 
-    const PATTERN: &str =
-        r"^(external-drive)+(-[a-z_]+)+@[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-((stable|beta|RC|alpha)(([.-]?\d+)*)?)?([.-]?dev)?(\+.*)?$";
-
     fn re() -> Regex {
-        Regex::new(PATTERN).unwrap()
+        Regex::new(APP_VERSION_PATTERN).unwrap()
     }
 
     #[test]

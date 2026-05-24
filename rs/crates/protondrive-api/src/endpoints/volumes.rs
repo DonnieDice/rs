@@ -1,5 +1,5 @@
 use crate::client::ApiClient;
-use protondrive_core::{error::Result, ids::VolumeId};
+use protondrive_core::error::Result;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

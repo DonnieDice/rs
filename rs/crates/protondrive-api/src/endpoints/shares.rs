@@ -29,6 +29,26 @@ pub struct CreateShareRequest {
 }
 
 impl ApiClient {
+    pub async fn get_my_files_share(&self) -> Result<ShareDto> {
+        #[derive(Deserialize)]
+        struct Wrap {
+            #[serde(rename = "Share")]
+            share: ShareDto,
+        }
+        let r: Wrap = self.get("/drive/v2/shares/my-files").await?;
+        Ok(r.share)
+    }
+
+    pub async fn get_share(&self, share_id: &ShareId) -> Result<ShareDto> {
+        #[derive(Deserialize)]
+        struct Wrap {
+            #[serde(rename = "Share")]
+            share: ShareDto,
+        }
+        let r: Wrap = self.get(&format!("/drive/shares/{share_id}")).await?;
+        Ok(r.share)
+    }
+
     pub async fn list_shares(&self) -> Result<ShareListResponse> {
         self.get("/drive/shares").await
     }

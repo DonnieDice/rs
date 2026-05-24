@@ -1,15 +1,15 @@
 #![forbid(unsafe_code)]
 
 pub mod builder;
+pub mod download;
 pub mod drive;
 pub mod upload;
-pub mod download;
 
 pub use builder::ProtonDriveBuilder;
 pub use drive::ProtonDrive;
 
 // Re-export core types consumers need
-pub use protondrive_auth::{Session, SerializedSession, TwoFactorProvider};
+pub use protondrive_auth::{SerializedSession, Session, TwoFactorProvider};
 pub use protondrive_core::{
     error::{DriveError, Result},
     ids::{EventId, NodeId, RevisionId, ShareId, VolumeId},

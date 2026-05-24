@@ -38,10 +38,10 @@ macro_rules! opaque_id {
     };
 }
 
-opaque_id!(VolumeId,   "Opaque identifier for a Proton Drive volume");
-opaque_id!(ShareId,    "Opaque identifier for a Proton Drive share");
-opaque_id!(NodeId,     "Opaque identifier for a file or folder node");
+opaque_id!(VolumeId, "Opaque identifier for a Proton Drive volume");
+opaque_id!(ShareId, "Opaque identifier for a Proton Drive share");
+opaque_id!(NodeId, "Opaque identifier for a file or folder node");
 opaque_id!(RevisionId, "Opaque identifier for a file revision");
-opaque_id!(EventId,    "Opaque identifier for an event stream position");
-opaque_id!(LinkId,     "Opaque identifier for a public share link");
-opaque_id!(AlbumId,    "Opaque identifier for a photo album");
+opaque_id!(EventId, "Opaque identifier for an event stream position");
+opaque_id!(LinkId, "Opaque identifier for a public share link");
+opaque_id!(AlbumId, "Opaque identifier for a photo album");

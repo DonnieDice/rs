@@ -70,10 +70,10 @@ impl fmt::Debug for SerializedSession {
 impl From<SerializedSession> for Session {
     fn from(s: SerializedSession) -> Self {
         Self {
-            uid: s.uid,
-            user_id: s.user_id,
-            access_token: SecretString::new(s.access_token.into()),
-            refresh_token: SecretString::new(s.refresh_token.into()),
+            uid: s.uid.clone(),
+            user_id: s.user_id.clone(),
+            access_token: SecretString::new(s.access_token.clone().into()),
+            refresh_token: SecretString::new(s.refresh_token.clone().into()),
         }
     }
 }

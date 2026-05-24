@@ -14,7 +14,10 @@ pub struct UploadOptions {
 
 impl Default for UploadOptions {
     fn default() -> Self {
-        Self { concurrency: 4, mime_type: None }
+        Self {
+            concurrency: 4,
+            mime_type: None,
+        }
     }
 }
 
@@ -33,9 +36,13 @@ pub async fn upload<R: AsyncRead + Unpin + Send>(
             .read(&mut buf)
             .await
             .map_err(|e| DriveError::Network(e.to_string()))?;
-        if n == 0 { break; }
+        if n == 0 {
+            break;
+        }
     }
 
     // TODO Phase 2: create revision, encrypt blocks, upload blocks, commit revision
-    Err(DriveError::Other(anyhow::anyhow!("upload not yet implemented (Phase 2)")))
+    Err(DriveError::Other(anyhow::anyhow!(
+        "upload not yet implemented (Phase 2)"
+    )))
 }

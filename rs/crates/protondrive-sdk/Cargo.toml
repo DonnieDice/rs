@@ -15,7 +15,7 @@ rustpgp = ["protondrive-crypto/rustpgp"]
 
 [dependencies]
 protondrive-core    = { workspace = true }
-protondrive-crypto  = { workspace = true }
+protondrive-crypto  = { workspace = true, default-features = false }
 protondrive-api     = { workspace = true }
 protondrive-auth    = { workspace = true }
 protondrive-events  = { workspace = true }
